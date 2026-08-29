@@ -1,0 +1,280 @@
+<!--
+  HTML-Vorlage: Antrag auf Wohngeld
+  ==================================
+  Platzhalter im Format {{variablenname}} werden vor der PDF-Erzeugung ersetzt
+  (z. B. im n8n-Code-Node "HTML-Vorlage befüllen"). Alle Werte müssen VOR dem
+  Einsetzen bereits formatiert sein (Datum als TT.MM.JJJJ, Beträge als "1.234,56 €"
+  usw.) und HTML-escaped werden — diese Vorlage selbst enthält keine Logik.
+
+  Erwartete Platzhalter:
+    Empfänger (statisch/Konfiguration, nicht aus dem Formular):
+      {{empfaenger_name}}      z. B. "Wohngeldstelle der Stadt Musterstadt"
+      {{empfaenger_adresse}}   z. B. "Rathausplatz 1, 12345 Musterstadt"
+
+    Dokumentmeta:
+      {{erstellungsdatum}}     z. B. "29. August 2026"
+      {{aktenzeichen}}         optional, z. B. "WG-2026-00123" (sonst "wird vergeben")
+
+    Antragstellende Person:
+      {{name}}
+      {{geburtsdatum}}         TT.MM.JJJJ
+
+    Anschrift:
+      {{strasse}}
+      {{plz}}
+      {{ort}}
+
+    Haushalt:
+      {{haushaltsgroesse}}     Anzahl Personen (nur Zahl, "Personen" steht schon im Text)
+      {{bruttoeinkommen}}      formatiert, z. B. "2.500,00 €"
+      {{sozialleistungen}}     bereits als "Ja" / "Nein" Text
+
+    Wohnung:
+      {{kaltmiete}}            formatiert, z. B. "650,00 €"
+      {{nebenkosten}}          formatiert, z. B. "180,00 €"
+      {{gesamtmiete}}          formatiert, Summe aus Kaltmiete + Nebenkosten
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Antrag auf Wohngeld</title>
+<style>
+	@page {
+		size: A4;
+		margin: 20mm 18mm;
+	}
+
+	* {
+		box-sizing: border-box;
+	}
+
+	body {
+		margin: 0;
+		background: #e2e8f0;
+		font-family: "Times New Roman", Times, serif;
+		color: #1a202c;
+		font-size: 13px;
+		line-height: 1.5;
+	}
+
+	.page {
+		max-width: 210mm;
+		margin: 24px auto;
+		padding: 22mm 18mm;
+		background: #ffffff;
+		box-shadow: 0 0 0 1px #cbd5e0;
+	}
+
+	.meta-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		margin-bottom: 36px;
+	}
+
+	.recipient {
+		font-size: 13px;
+		white-space: pre-line;
+	}
+
+	.doc-meta {
+		text-align: right;
+		font-size: 12px;
+		color: #4a5568;
+	}
+
+	.doc-meta div + div {
+		margin-top: 2px;
+	}
+
+	h1 {
+		font-size: 20px;
+		letter-spacing: 0.02em;
+		text-transform: uppercase;
+		text-align: center;
+		margin: 0 0 4px;
+	}
+
+	.subtitle {
+		text-align: center;
+		font-size: 12px;
+		color: #4a5568;
+		margin: 0 0 32px;
+	}
+
+	.intro {
+		margin: 0 0 24px;
+		text-align: justify;
+	}
+
+	h2 {
+		font-size: 13px;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: #1a365d;
+		border-bottom: 1.5px solid #1a365d;
+		padding-bottom: 4px;
+		margin: 28px 0 10px;
+	}
+
+	table.field-table {
+		width: 100%;
+		border-collapse: collapse;
+		margin-bottom: 4px;
+	}
+
+	table.field-table th,
+	table.field-table td {
+		border: 1px solid #a0aec0;
+		padding: 7px 12px;
+		text-align: left;
+		font-weight: normal;
+		vertical-align: top;
+	}
+
+	table.field-table th {
+		width: 230px;
+		background: #f7fafc;
+		font-weight: bold;
+	}
+
+	.signature-block {
+		display: flex;
+		justify-content: space-between;
+		margin-top: 56px;
+	}
+
+	.signature-line {
+		width: 46%;
+	}
+
+	.signature-line .line {
+		border-top: 1px solid #1a202c;
+		margin-top: 40px;
+		padding-top: 4px;
+		font-size: 11px;
+		color: #4a5568;
+	}
+
+	.checklist {
+		margin-top: 40px;
+		border: 1.5px solid #38a169;
+		border-radius: 4px;
+		padding: 16px 20px;
+		background: #f0fff4;
+	}
+
+	.checklist h2 {
+		border-bottom: none;
+		color: #22543d;
+		margin-top: 0;
+		padding-bottom: 0;
+	}
+
+	.checklist ul {
+		list-style: none;
+		margin: 8px 0 0;
+		padding: 0;
+	}
+
+	.checklist li {
+		margin: 0 0 8px;
+		padding-left: 26px;
+		position: relative;
+	}
+
+	.checklist li::before {
+		content: "☐";
+		position: absolute;
+		left: 0;
+		top: -1px;
+		font-size: 15px;
+		color: #22543d;
+	}
+
+	footer {
+		margin-top: 40px;
+		padding-top: 10px;
+		border-top: 1px solid #e2e8f0;
+		font-size: 10px;
+		color: #a0aec0;
+		text-align: center;
+	}
+</style>
+</head>
+<body>
+	<div class="page">
+		<div class="meta-row">
+			<div class="recipient">{{empfaenger_name}}
+{{empfaenger_adresse}}</div>
+			<div class="doc-meta">
+				<div>Erstellt am {{erstellungsdatum}}</div>
+				<div>Aktenzeichen: {{aktenzeichen}}</div>
+			</div>
+		</div>
+
+		<h1>Antrag auf Wohngeld</h1>
+		<p class="subtitle">gemäß §§ 3 ff. Wohngeldgesetz (WoGG)</p>
+
+		<p class="intro">
+			Hiermit beantrage ich die Gewährung von Wohngeld gemäß Wohngeldgesetz. Die nachfolgenden
+			Angaben zu meiner Person, meinem Haushalt und meiner Wohnung sind vollständig und
+			wahrheitsgemäß.
+		</p>
+
+		<h2>Angaben zur antragstellenden Person</h2>
+		<table class="field-table">
+			<tr><th>Name</th><td>{{name}}</td></tr>
+			<tr><th>Geburtsdatum</th><td>{{geburtsdatum}}</td></tr>
+		</table>
+
+		<h2>Anschrift</h2>
+		<table class="field-table">
+			<tr><th>Straße, Hausnummer</th><td>{{strasse}}</td></tr>
+			<tr><th>Postleitzahl</th><td>{{plz}}</td></tr>
+			<tr><th>Ort</th><td>{{ort}}</td></tr>
+		</table>
+
+		<h2>Angaben zum Haushalt</h2>
+		<table class="field-table">
+			<tr><th>Haushaltsgröße</th><td>{{haushaltsgroesse}} Personen</td></tr>
+			<tr><th>Monatliches Bruttoeinkommen</th><td>{{bruttoeinkommen}}</td></tr>
+			<tr><th>Bezug anderer Sozialleistungen</th><td>{{sozialleistungen}}</td></tr>
+		</table>
+
+		<h2>Angaben zur Wohnung</h2>
+		<table class="field-table">
+			<tr><th>Kaltmiete</th><td>{{kaltmiete}}</td></tr>
+			<tr><th>Nebenkosten</th><td>{{nebenkosten}}</td></tr>
+			<tr><th>Gesamtmiete</th><td>{{gesamtmiete}}</td></tr>
+		</table>
+
+		<div class="signature-block">
+			<div class="signature-line">
+				<div class="line">Ort, Datum</div>
+			</div>
+			<div class="signature-line">
+				<div class="line">Unterschrift der antragstellenden Person</div>
+			</div>
+		</div>
+
+		<div class="checklist">
+			<h2>Diese Unterlagen brauchst du noch:</h2>
+			<ul>
+				<li>Gültiger Personalausweis oder Reisepass (Kopie)</li>
+				<li>Meldebescheinigung bzw. Nachweis deiner aktuellen Anschrift</li>
+				<li>Einkommensnachweise aller Haushaltsmitglieder (z. B. die letzten drei Gehaltsabrechnungen)</li>
+				<li>Aktueller Mietvertrag</li>
+				<li>Nachweis der monatlichen Miete und Nebenkosten (z. B. letzte Nebenkostenabrechnung)</li>
+				<li>Kontoauszüge der letzten drei Monate</li>
+				<li>Nachweis über den Bezug von Kindergeld, falls zutreffend</li>
+				<li>Nachweis über bereits bezogene Sozialleistungen, falls zutreffend (z. B. Bürgergeld-Bescheid)</li>
+				<li>Nachweise über vorhandenes Vermögen, z. B. Sparbücher oder Bausparverträge</li>
+			</ul>
+		</div>
+
+		<footer>Dieser Antrag wurde automatisiert aus den Angaben der antragstellenden Person erstellt und ersetzt keine Rechtsberatung.</footer>
+	</div>
+</body>
+</html>

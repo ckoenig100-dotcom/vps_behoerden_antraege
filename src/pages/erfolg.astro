@@ -1,0 +1,25 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { withBase } from "../lib/base";
+---
+
+<Layout
+	title="Formularhilfe — Antrag erfolgreich erstellt"
+	description="Ihr Antrag wurde erfolgreich erstellt und per E-Mail versendet."
+>
+	<section class="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+		<span class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-green/10 text-4xl" aria-hidden="true">
+			✅
+		</span>
+		<h1 class="mt-6 text-3xl font-bold text-brand-blue sm:text-4xl">Ihr Antrag wurde erstellt!</h1>
+		<p class="mt-4 text-lg text-slate-600">
+			Wir haben Ihren Antrag als PDF erstellt und an Ihre angegebene E-Mail-Adresse gesendet.
+		</p>
+		<a
+			href={withBase("")}
+			class="mt-8 inline-flex min-h-11 items-center justify-center rounded-lg bg-brand-blue px-8 py-3 text-base font-semibold text-white shadow-md transition hover:bg-brand-blue/90"
+		>
+			Zurück zur Startseite
+		</a>
+	</section>
+</Layout>

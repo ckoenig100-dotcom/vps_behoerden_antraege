@@ -1,0 +1,394 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const stepNames = ["Antragsdetails", "Adresse", "Zusammenfassung"];
+const totalSteps = stepNames.length;
+---
+
+<Layout
+	title="Formularhilfe — Pflegegeld beantragen"
+	description="Beantragen Sie die Zuerkennung oder Erhöhung des Pflegegeldes in wenigen einfachen Schritten. Wir erstellen Ihren Antrag als PDF und senden ihn per E-Mail."
+>
+	<section class="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+		<h1 class="text-3xl font-bold text-brand-blue sm:text-4xl">Pflegegeld beantragen</h1>
+		<p class="mt-2 text-lg text-slate-600">
+			Beantworten Sie {totalSteps} kurze Schritte — wir erstellen daraus Ihren fertigen Antrag.
+		</p>
+
+		<div class="mt-8">
+			<div class="flex items-center justify-between text-sm font-medium text-slate-600">
+				<span id="step-label">Schritt 1 von {totalSteps}</span>
+				<span id="step-name">{stepNames[0]}</span>
+			</div>
+			<div
+				role="progressbar"
+				aria-labelledby="step-label"
+				aria-valuemin="0"
+				aria-valuemax="100"
+				aria-valuenow="33"
+				id="progress-track"
+				class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200"
+			>
+				<div
+					id="progress-bar"
+					class="h-full rounded-full bg-brand-green transition-all duration-300 ease-out"
+					style={`width: ${100 / totalSteps}%`}
+				>
+				</div>
+			</div>
+			<p id="step-announcer" class="sr-only" aria-live="polite"></p>
+		</div>
+
+		<form id="pflegegeld-form" novalidate class="mt-8">
+			<div class="relative overflow-hidden">
+				<section data-step="1" class="wizard-step space-y-5 transition-all duration-300 ease-out">
+					<h2 class="text-xl font-bold text-brand-blue">Antragsdetails</h2>
+
+					<div>
+						<label for="antragsart" class="block text-sm font-medium text-slate-700">Ich beantrage</label>
+						<select
+							id="antragsart"
+							name="antragsart"
+							required
+							class="form-input mt-1 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+						>
+							<option value="" disabled selected>Bitte auswählen</option>
+							<option value="zuerkennung">die Zuerkennung des Pflegegeldes</option>
+							<option value="erhoehung">die Erhöhung des Pflegegeldes</option>
+						</select>
+					</div>
+
+					<div>
+						<label for="name" class="block text-sm font-medium text-slate-700">Name</label>
+						<input
+							id="name"
+							name="name"
+							type="text"
+							autocomplete="name"
+							required
+							class="form-input mt-1 block min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+						/>
+					</div>
+				</section>
+
+				<section data-step="2" class="wizard-step hidden space-y-5 transition-all duration-300 ease-out">
+					<h2 class="text-xl font-bold text-brand-blue">Adresse</h2>
+
+					<div>
+						<label for="strasse" class="block text-sm font-medium text-slate-700">Straße und Hausnummer</label>
+						<input
+							id="strasse"
+							name="strasse"
+							type="text"
+							autocomplete="street-address"
+							required
+							class="form-input mt-1 block min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+						/>
+					</div>
+
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label for="plz" class="block text-sm font-medium text-slate-700">PLZ</label>
+							<input
+								id="plz"
+								name="plz"
+								type="text"
+								inputmode="numeric"
+								pattern="[0-9]{4}"
+								autocomplete="postal-code"
+								aria-describedby="plz-hint"
+								required
+								class="form-input mt-1 block min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+							/>
+							<p id="plz-hint" class="mt-1 text-xs text-slate-500">4-stellig</p>
+						</div>
+						<div>
+							<label for="ort" class="block text-sm font-medium text-slate-700">Ort</label>
+							<input
+								id="ort"
+								name="ort"
+								type="text"
+								autocomplete="address-level2"
+								required
+								class="form-input mt-1 block min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+							/>
+						</div>
+					</div>
+				</section>
+
+				<section data-step="3" class="wizard-step hidden space-y-6 transition-all duration-300 ease-out">
+					<h2 class="text-xl font-bold text-brand-blue">Zusammenfassung</h2>
+					<p class="text-sm text-slate-600">Bitte prüfen Sie Ihre Angaben, bevor Sie den Antrag erstellen.</p>
+
+					<dl id="summary-list" class="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-slate-50"></dl>
+
+					<div>
+						<label for="email" class="block text-sm font-medium text-slate-700">E-Mail-Adresse (für den PDF-Versand)</label>
+						<input
+							id="email"
+							name="email"
+							type="email"
+							autocomplete="email"
+							required
+							class="form-input mt-1 block min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+						/>
+					</div>
+
+					<p id="submit-error" class="hidden rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"></p>
+				</section>
+			</div>
+
+			<div class="mt-8 flex items-center gap-4">
+				<button
+					type="button"
+					id="btn-back"
+					class="hidden min-h-11 rounded-lg border border-slate-300 px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-100"
+				>
+					Zurück
+				</button>
+				<button
+					type="button"
+					id="btn-next"
+					class="ml-auto min-h-11 rounded-lg bg-brand-blue px-6 py-3 font-semibold text-white transition hover:bg-brand-blue/90"
+				>
+					Weiter
+				</button>
+				<button
+					type="submit"
+					id="btn-submit"
+					class="ml-auto hidden min-h-11 rounded-lg bg-brand-green px-8 py-3 text-lg font-semibold text-white shadow-md transition hover:bg-brand-green/90 disabled:cursor-not-allowed disabled:opacity-60"
+				>
+					Antrag erstellen
+				</button>
+			</div>
+		</form>
+	</section>
+</Layout>
+
+<style>
+	.form-input:invalid.was-validated {
+		border-color: #dc2626;
+	}
+</style>
+
+<script>
+	// @ts-nocheck
+	import { withBase } from "../lib/base";
+
+	const form = document.getElementById("pflegegeld-form");
+	const steps = Array.from(form.querySelectorAll(".wizard-step"));
+	const totalSteps = steps.length;
+	const stepNames = ["Antragsdetails", "Adresse", "Zusammenfassung"];
+
+	const progressBar = document.getElementById("progress-bar");
+	const progressTrack = document.getElementById("progress-track");
+	const stepLabel = document.getElementById("step-label");
+	const stepName = document.getElementById("step-name");
+	const stepAnnouncer = document.getElementById("step-announcer");
+	const btnBack = document.getElementById("btn-back");
+	const btnNext = document.getElementById("btn-next");
+	const btnSubmit = document.getElementById("btn-submit");
+	const summaryList = document.getElementById("summary-list");
+	const submitError = document.getElementById("submit-error");
+
+	let current = 1;
+
+	const validationMessages = {
+		antragsart: { valueMissing: "Bitte wählen Sie eine Antragsart aus." },
+		name: { valueMissing: "Bitte geben Sie Ihren Namen ein." },
+		strasse: { valueMissing: "Bitte geben Sie Ihre Straße und Hausnummer ein." },
+		plz: {
+			valueMissing: "Bitte geben Sie Ihre Postleitzahl ein.",
+			patternMismatch: "Die Postleitzahl muss aus 4 Ziffern bestehen.",
+		},
+		ort: { valueMissing: "Bitte geben Sie Ihren Wohnort ein." },
+		email: {
+			valueMissing: "Bitte geben Sie Ihre E-Mail-Adresse an.",
+			typeMismatch: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+		},
+	};
+
+	function applyCustomValidity(field) {
+		const rules = validationMessages[field.name];
+		if (!rules) return;
+		if (field.validity.valid) {
+			field.setCustomValidity("");
+			return;
+		}
+		for (const key of Object.keys(rules)) {
+			if (field.validity[key]) {
+				field.setCustomValidity(rules[key]);
+				return;
+			}
+		}
+		field.setCustomValidity("");
+	}
+
+	form.querySelectorAll("input, select").forEach((field) => {
+		field.addEventListener("invalid", () => {
+			applyCustomValidity(field);
+			field.classList.add("was-validated");
+		});
+		field.addEventListener("input", () => {
+			field.setCustomValidity("");
+			field.classList.remove("was-validated");
+		});
+		field.addEventListener("change", () => {
+			field.setCustomValidity("");
+			field.classList.remove("was-validated");
+		});
+	});
+
+	function currentSection() {
+		return steps.find((section) => Number(section.dataset.step) === current);
+	}
+
+	function validateCurrentStep() {
+		const section = currentSection();
+		const fields = Array.from(section.querySelectorAll("input, select, textarea"));
+		for (const field of fields) {
+			if (!field.checkValidity()) {
+				field.reportValidity();
+				field.focus();
+				return false;
+			}
+		}
+		return true;
+	}
+
+	function escapeHtml(value) {
+		const div = document.createElement("div");
+		div.textContent = value;
+		return div.innerHTML;
+	}
+
+	const antragsartLabels = {
+		zuerkennung: "die Zuerkennung des Pflegegeldes",
+		erhoehung: "die Erhöhung des Pflegegeldes",
+	};
+
+	const summaryFields = [
+		{
+			name: "antragsart",
+			label: "Ich beantrage",
+			format: (value) => antragsartLabels[value] ?? value,
+		},
+		{ name: "name", label: "Name" },
+		{ name: "strasse", label: "Straße" },
+		{ name: "plz", label: "PLZ" },
+		{ name: "ort", label: "Ort" },
+	];
+
+	function fillSummary() {
+		summaryList.innerHTML = summaryFields
+			.map(({ name, label, suffix, format }) => {
+				const field = form.elements.namedItem(name);
+				const raw = field ? field.value : "";
+				const value = format ? format(raw) : `${raw}${suffix ?? ""}`;
+				return `<div class="flex items-center justify-between gap-4 px-4 py-3 text-sm">
+					<dt class="font-medium text-slate-600">${escapeHtml(label)}</dt>
+					<dd class="text-right font-medium text-slate-900">${escapeHtml(value)}</dd>
+				</div>`;
+			})
+			.join("");
+	}
+
+	function showStep(n, direction) {
+		steps.forEach((section) => {
+			const stepNum = Number(section.dataset.step);
+			if (stepNum === n) {
+				section.classList.remove("hidden");
+				section.classList.add("opacity-0", direction === "back" ? "-translate-x-4" : "translate-x-4");
+				void section.offsetWidth;
+				requestAnimationFrame(() => {
+					section.classList.remove("opacity-0", "translate-x-4", "-translate-x-4");
+				});
+			} else {
+				section.classList.add("hidden");
+			}
+		});
+
+		const percent = Math.round((n / totalSteps) * 100);
+		progressBar.style.width = `${percent}%`;
+		progressTrack.setAttribute("aria-valuenow", String(percent));
+		stepLabel.textContent = `Schritt ${n} von ${totalSteps}`;
+		stepName.textContent = stepNames[n - 1];
+		stepAnnouncer.textContent = `Schritt ${n} von ${totalSteps}: ${stepNames[n - 1]}`;
+
+		btnBack.classList.toggle("hidden", n === 1);
+		btnNext.classList.toggle("hidden", n === totalSteps);
+		btnSubmit.classList.toggle("hidden", n !== totalSteps);
+
+		if (n === totalSteps) fillSummary();
+	}
+
+	btnNext.addEventListener("click", () => {
+		if (!validateCurrentStep()) return;
+		current = Math.min(current + 1, totalSteps);
+		showStep(current, "forward");
+	});
+
+	btnBack.addEventListener("click", () => {
+		current = Math.max(current - 1, 1);
+		showStep(current, "back");
+	});
+
+	form.addEventListener("submit", async (event) => {
+		event.preventDefault();
+		if (!validateCurrentStep()) return;
+
+		submitError.classList.add("hidden");
+		btnSubmit.disabled = true;
+		const originalLabel = btnSubmit.textContent;
+		btnSubmit.textContent = "Wird gesendet…";
+
+		const webhookUrl = import.meta.env.PUBLIC_WEBHOOK_URL;
+		const { email, ...formData } = Object.fromEntries(new FormData(form).entries());
+
+		try {
+			if (!webhookUrl) throw new Error("Kein Webhook konfiguriert");
+
+			const response = await fetch(webhookUrl, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ antragstyp: "pflegegeld", formData, email }),
+			});
+
+			const result = await response.json().catch(() => null);
+
+			if (result?.verificationRequired) {
+				submitError.textContent =
+					result.message ??
+					"Wir haben dir eine Bestätigungs-E-Mail geschickt. Bitte klicke auf den Link darin, um deinen Antrag abzuschließen.";
+				submitError.classList.remove("hidden", "bg-red-50", "text-red-700");
+				submitError.classList.add("bg-blue-50", "text-blue-700");
+				btnSubmit.disabled = false;
+				btnSubmit.textContent = originalLabel;
+				return;
+			}
+
+			if (result?.paymentRequired) {
+				const query = new URLSearchParams({
+					pendingId: result.pendingId,
+					antragstyp: result.antragstyp ?? "pflegegeld",
+				});
+				window.location.href = `${withBase("bezahlung")}?${query.toString()}`;
+				return;
+			}
+
+			if (!response.ok || !result?.success) throw new Error("Webhook-Fehler");
+
+			window.location.href = withBase("erfolg");
+		} catch (error) {
+			submitError.classList.remove("bg-blue-50", "text-blue-700");
+			submitError.classList.add("bg-red-50", "text-red-700");
+			submitError.textContent =
+				"Beim Versenden ist ein Fehler aufgetreten. Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.";
+			submitError.classList.remove("hidden");
+			btnSubmit.disabled = false;
+			btnSubmit.textContent = originalLabel;
+		}
+	});
+
+	showStep(current, "forward");
+</script>

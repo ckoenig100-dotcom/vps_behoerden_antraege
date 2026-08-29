@@ -1,0 +1,88 @@
+---
+import { withBase } from "../lib/base";
+
+const navLinks = [
+	{ href: withBase("wohngeld"), label: "Wohngeld" },
+	{ href: withBase("kinderzuschlag"), label: "Kinderzuschlag" },
+	{ href: withBase("elterngeld"), label: "Elterngeld" },
+	{ href: withBase("pflegegeld"), label: "Pflegegeld" },
+];
+---
+
+<header class="sticky top-0 z-40 border-b border-slate-200 bg-brand-blue text-white">
+	<div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+		<a href={withBase("")} class="flex min-h-11 items-center gap-2 text-lg font-bold tracking-tight">
+			<img
+				src={withBase("profil.jpg")}
+				alt=""
+				class="h-8 w-8 rounded-full border border-white/30 object-cover"
+			/>
+			Formularhilfe
+		</a>
+
+		<nav aria-label="Hauptnavigation" class="hidden md:block">
+			<ul class="flex items-center gap-1">
+				{navLinks.map((link) => (
+					<li>
+						<a
+							href={link.href}
+							class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-white/90 hover:bg-white/10 hover:text-white"
+						>
+							{link.label}
+						</a>
+					</li>
+				))}
+			</ul>
+		</nav>
+
+		<a
+			href="mailto:chris@live.at"
+			aria-label="Kontakt per E-Mail: chris@live.at"
+			title="chris@live.at"
+			class="inline-flex min-h-11 items-center gap-2 rounded-md bg-brand-green px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-green/90"
+		>
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+			Kontakt
+		</a>
+
+		<button
+			type="button"
+			id="menu-toggle"
+			aria-expanded="false"
+			aria-controls="mobile-nav"
+			class="flex min-h-11 min-w-11 items-center justify-center rounded-md text-white hover:bg-white/10 md:hidden"
+		>
+			<span class="sr-only">Menü öffnen</span>
+			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<line x1="4" y1="6" x2="20" y2="6"></line>
+				<line x1="4" y1="12" x2="20" y2="12"></line>
+				<line x1="4" y1="18" x2="20" y2="18"></line>
+			</svg>
+		</button>
+	</div>
+
+	<nav id="mobile-nav" aria-label="Mobile Navigation" class="hidden border-t border-white/10 md:hidden">
+		<ul class="flex flex-col px-4 py-2">
+			{navLinks.map((link) => (
+				<li>
+					<a
+						href={link.href}
+						class="flex min-h-11 items-center rounded-md px-2 text-sm font-medium text-white/90 hover:bg-white/10 hover:text-white"
+					>
+						{link.label}
+					</a>
+				</li>
+			))}
+		</ul>
+	</nav>
+</header>
+
+<script>
+	const toggle = document.getElementById("menu-toggle");
+	const mobileNav = document.getElementById("mobile-nav");
+
+	toggle?.addEventListener("click", () => {
+		const isOpen = mobileNav?.classList.toggle("hidden") === false;
+		toggle.setAttribute("aria-expanded", String(isOpen));
+	});
+</script>

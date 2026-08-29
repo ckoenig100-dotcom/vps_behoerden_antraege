@@ -1,0 +1,201 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+	title="Formularhilfe — Administration"
+	description="Verwaltung der Bezahlschranke pro Antragstyp."
+>
+	<section class="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+		<h1 class="text-3xl font-bold text-brand-blue sm:text-4xl">Administration</h1>
+		<p class="mt-2 text-lg text-slate-600">
+			Lege fest, welche Antragstypen kostenpflichtig sind. Die ersten 3 Anträge pro E-Mail-Adresse
+			sind für kostenpflichtige Formulare immer kostenlos.
+		</p>
+
+		<div id="login-form" class="mt-8 max-w-sm space-y-4">
+			<div>
+				<label for="password" class="block text-sm font-medium text-slate-700">Passwort</label>
+				<input
+					id="password"
+					type="password"
+					autocomplete="current-password"
+					class="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+				/>
+			</div>
+			<button
+				type="button"
+				id="btn-login"
+				class="min-h-11 rounded-lg bg-brand-blue px-6 py-3 font-semibold text-white transition hover:bg-brand-blue/90"
+			>
+				Anmelden
+			</button>
+			<p id="login-error" class="hidden rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"></p>
+		</div>
+
+		<div id="config-panel" class="mt-8 hidden space-y-4">
+			<div id="toggle-list" class="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white"></div>
+			<button
+				type="button"
+				id="btn-save"
+				class="min-h-11 rounded-lg bg-brand-green px-6 py-3 font-semibold text-white transition hover:bg-brand-green/90 disabled:cursor-not-allowed disabled:opacity-60"
+			>
+				Speichern
+			</button>
+			<p id="save-message" class="hidden text-sm" role="status"></p>
+
+			<h2 class="pt-8 text-xl font-bold text-brand-blue">Verifizierte E-Mail-Adressen</h2>
+			<p class="text-sm text-slate-600">
+				Diese Adressen haben ihre E-Mail bereits bestätigt und müssen das beim nächsten Antrag
+				nicht erneut tun. Entfernen erzwingt eine erneute Bestätigung beim nächsten Antrag.
+			</p>
+			<div id="verified-list" class="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white"></div>
+			<p id="verified-empty" class="hidden text-sm text-slate-500">Keine verifizierten Adressen.</p>
+		</div>
+	</section>
+</Layout>
+
+<script>
+	// @ts-nocheck
+	const antragstypLabels = {
+		wohngeld: "Wohngeld",
+		kinderzuschlag: "Kinderzuschlag",
+		elterngeld: "Elterngeld",
+		pflegegeld: "Pflegegeld",
+	};
+
+	const loginForm = document.getElementById("login-form");
+	const configPanel = document.getElementById("config-panel");
+	const passwordInput = document.getElementById("password");
+	const btnLogin = document.getElementById("btn-login");
+	const loginError = document.getElementById("login-error");
+	const toggleList = document.getElementById("toggle-list");
+	const btnSave = document.getElementById("btn-save");
+	const saveMessage = document.getElementById("save-message");
+	const verifiedList = document.getElementById("verified-list");
+	const verifiedEmpty = document.getElementById("verified-empty");
+
+	let password = "";
+
+	async function callAdminApi(action, extra = {}) {
+		const webhookUrl = import.meta.env.PUBLIC_ADMIN_WEBHOOK_URL;
+		const response = await fetch(webhookUrl, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ action, password, ...extra }),
+		});
+		return response.json();
+	}
+
+	function renderVerified(verified) {
+		const entries = Object.entries(verified ?? {}).sort(
+			(a, b) => new Date(b[1].verifiedAt).getTime() - new Date(a[1].verifiedAt).getTime()
+		);
+
+		verifiedEmpty.classList.toggle("hidden", entries.length > 0);
+		verifiedList.innerHTML = entries
+			.map(([email, info]) => {
+				const datum = new Date(info.verifiedAt).toLocaleString("de-DE");
+				return `
+				<div class="flex items-center justify-between gap-4 px-4 py-3">
+					<div>
+						<div class="font-medium text-slate-900">${email}</div>
+						<div class="text-xs text-slate-500">verifiziert am ${datum}</div>
+					</div>
+					<button
+						type="button"
+						data-delete-email="${email}"
+						class="min-h-11 rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50"
+					>
+						Entfernen
+					</button>
+				</div>
+			`;
+			})
+			.join("");
+
+		verifiedList.querySelectorAll("[data-delete-email]").forEach((button) => {
+			button.addEventListener("click", async () => {
+				button.disabled = true;
+				try {
+					const result = await callAdminApi("delete_verified", { email: button.dataset.deleteEmail });
+					if (!result?.success) throw new Error(result?.message ?? "Entfernen fehlgeschlagen.");
+					renderVerified(result.verified);
+				} catch (error) {
+					button.disabled = false;
+					alert(error instanceof Error ? error.message : "Entfernen fehlgeschlagen.");
+				}
+			});
+		});
+	}
+
+	function renderToggles(config) {
+		toggleList.innerHTML = Object.keys(antragstypLabels)
+			.map(
+				(typ) => `
+			<div class="flex items-center justify-between gap-4 px-4 py-3">
+				<span class="font-medium text-slate-900">${antragstypLabels[typ]}</span>
+				<label class="relative inline-flex min-h-11 cursor-pointer items-center">
+					<input type="checkbox" data-antragstyp="${typ}" class="peer sr-only" ${config[typ] ? "checked" : ""} />
+					<span class="h-6 w-11 rounded-full bg-slate-300 transition peer-checked:bg-brand-green"></span>
+					<span class="absolute left-1 h-4 w-4 rounded-full bg-white transition peer-checked:translate-x-5"></span>
+					<span class="ml-3 text-sm text-slate-600 peer-checked:text-brand-green">kostenpflichtig</span>
+				</label>
+			</div>
+		`
+			)
+			.join("");
+	}
+
+	btnLogin.addEventListener("click", async () => {
+		password = passwordInput.value;
+		loginError.classList.add("hidden");
+		btnLogin.disabled = true;
+
+		try {
+			const result = await callAdminApi("get");
+			if (!result?.success) {
+				throw new Error(result?.message ?? "Anmeldung fehlgeschlagen.");
+			}
+			renderToggles(result.config);
+			renderVerified(result.verified);
+			loginForm.classList.add("hidden");
+			configPanel.classList.remove("hidden");
+		} catch (error) {
+			loginError.textContent = error instanceof Error ? error.message : "Anmeldung fehlgeschlagen.";
+			loginError.classList.remove("hidden");
+		} finally {
+			btnLogin.disabled = false;
+		}
+	});
+
+	btnSave.addEventListener("click", async () => {
+		btnSave.disabled = true;
+		saveMessage.classList.add("hidden");
+
+		const config = {};
+		toggleList.querySelectorAll("input[data-antragstyp]").forEach((input) => {
+			config[input.dataset.antragstyp] = input.checked;
+		});
+
+		try {
+			const result = await callAdminApi("set", { config });
+			if (!result?.success) {
+				throw new Error(result?.message ?? "Speichern fehlgeschlagen.");
+			}
+			saveMessage.textContent = "Gespeichert.";
+			saveMessage.className = "text-sm text-brand-green";
+			saveMessage.classList.remove("hidden");
+		} catch (error) {
+			saveMessage.textContent = error instanceof Error ? error.message : "Speichern fehlgeschlagen.";
+			saveMessage.className = "text-sm text-red-600";
+			saveMessage.classList.remove("hidden");
+		} finally {
+			btnSave.disabled = false;
+		}
+	});
+
+	passwordInput.addEventListener("keydown", (event) => {
+		if (event.key === "Enter") btnLogin.click();
+	});
+</script>

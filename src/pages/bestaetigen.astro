@@ -1,0 +1,83 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+	title="Formularhilfe — E-Mail bestätigen"
+	description="Bestätige deine E-Mail-Adresse, um deinen Antrag abzuschließen."
+>
+	<section class="mx-auto max-w-lg px-4 py-16 text-center sm:px-6">
+		<h1 class="text-3xl font-bold text-brand-blue sm:text-4xl">E-Mail-Adresse bestätigen</h1>
+		<p class="mt-4 text-lg text-slate-600">
+			Bitte bestätige deine E-Mail-Adresse, um deinen Antrag abzuschließen.
+		</p>
+
+		<button
+			type="button"
+			id="btn-confirm"
+			class="mt-8 min-h-11 rounded-lg bg-brand-green px-8 py-3 text-lg font-semibold text-white shadow-md transition hover:bg-brand-green/90 disabled:cursor-not-allowed disabled:opacity-60"
+		>
+			E-Mail-Adresse bestätigen
+		</button>
+
+		<p id="page-error" class="mt-6 hidden rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"></p>
+	</section>
+</Layout>
+
+<script>
+	// @ts-nocheck
+	import { withBase } from "../lib/base";
+
+	const params = new URLSearchParams(window.location.search);
+	const token = params.get("token");
+
+	const btnConfirm = document.getElementById("btn-confirm");
+	const pageError = document.getElementById("page-error");
+
+	function showError(message) {
+		pageError.textContent = message;
+		pageError.classList.remove("hidden");
+	}
+
+	if (!token) {
+		btnConfirm.disabled = true;
+		showError("Es fehlt ein gültiger Bestätigungs-Token. Bitte nutze den Link aus deiner E-Mail.");
+	}
+
+	btnConfirm?.addEventListener("click", async () => {
+		btnConfirm.disabled = true;
+		pageError.classList.add("hidden");
+
+		try {
+			const webhookUrl = import.meta.env.PUBLIC_VERIFY_WEBHOOK_URL;
+			const response = await fetch(webhookUrl, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ token }),
+			});
+			const result = await response.json().catch(() => null);
+
+			if (result?.paymentRequired) {
+				const query = new URLSearchParams({
+					pendingId: result.pendingId,
+					antragstyp: result.antragstyp ?? "",
+				});
+				window.location.href = `${withBase("bezahlung")}?${query.toString()}`;
+				return;
+			}
+
+			if (!response.ok || !result?.success) {
+				throw new Error(result?.message ?? "Bestätigung fehlgeschlagen.");
+			}
+
+			window.location.href = withBase("erfolg");
+		} catch (error) {
+			showError(
+				error instanceof Error && error.message
+					? error.message
+					: "Beim Bestätigen ist ein Fehler aufgetreten. Bitte versuche es erneut."
+			);
+			btnConfirm.disabled = false;
+		}
+	});
+</script>

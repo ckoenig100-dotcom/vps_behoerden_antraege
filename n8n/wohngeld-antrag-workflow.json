@@ -1,0 +1,1157 @@
+{
+  "name": "Formularhilfe – Antrag verarbeiten",
+  "nodes": [
+    {
+      "id": "0542edd1-e5e8-4d04-9f46-b10e47e54a02",
+      "name": "Webhook: Antrag empfangen",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        260
+      ],
+      "webhookId": "ddf662dc-5b0d-4305-b835-69b9637afc22",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "antrag",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "3333c5f2-b67f-43a1-a863-5b5bf30f4cf2",
+      "name": "Antragstyp prüfen",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        80,
+        260
+      ],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "outputKey": "wohngeld",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.antragstyp }}",
+                    "rightValue": "wohngeld",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "kinderzuschlag",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.antragstyp }}",
+                    "rightValue": "kinderzuschlag",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "elterngeld",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.antragstyp }}",
+                    "rightValue": "elterngeld",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "pflegegeld",
+              "renameOutput": true,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.antragstyp }}",
+                    "rightValue": "pflegegeld",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Unbekannt"
+        }
+      }
+    },
+    {
+      "id": "a48cade0-4cef-47a7-95aa-10aac403918e",
+      "name": "Pflichtfelder validieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        140
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const { antragstyp, formData, email } = $input.item.json.body ?? {};\n\nconst requiredFieldsByType = {\n  wohngeld: [\n    \"name\",\n    \"geburtsdatum\",\n    \"strasse\",\n    \"plz\",\n    \"ort\",\n    \"haushaltsgroesse\",\n    \"bruttoeinkommen\",\n    \"sozialleistungen\",\n    \"kaltmiete\",\n    \"nebenkosten\",\n  ],\n  kinderzuschlag: [\n    \"name\",\n    \"strasse\",\n    \"plz\",\n    \"ort\",\n    \"anzahlKinder\",\n    \"alterKinder\",\n    \"einkommen\",\n    \"wohnkosten\",\n    \"kindergeldBezug\",\n  ],\n  elterngeld: [\n    \"name\",\n    \"strasse\",\n    \"plz\",\n    \"ort\",\n    \"geburtsterminKind\",\n    \"einkommenVorGeburt\",\n    \"arbeitgeber\",\n    \"elternzeitMonate\",\n  ],\n  pflegegeld: [\n    \"antragsart\",\n    \"name\",\n    \"strasse\",\n    \"plz\",\n    \"ort\",\n  ],\n};\n\nconst requiredFields = requiredFieldsByType[antragstyp];\nif (!requiredFields) {\n  throw new Error(`Unbekannter Antragstyp: \"${antragstyp}\"`);\n}\n\nconst emailPattern = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nif (!email || !emailPattern.test(email)) {\n  throw new Error(\"Fehlende oder ungültige E-Mail-Adresse.\");\n}\n\nconst missingFields = requiredFields.filter((field) => {\n  const value = formData ? formData[field] : undefined;\n  return value === undefined || value === null || value === \"\";\n});\n\nif (missingFields.length > 0) {\n  throw new Error(`Folgende Pflichtfelder fehlen: ${missingFields.join(\", \")}`);\n}\n\nreturn { json: { antragstyp, formData, email, quelle: \"wizard\" } };"
+      }
+    },
+    {
+      "id": "1278e640-4f01-4f86-8330-71afd4614f19",
+      "name": "HTML-Vorlage befüllen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        60
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "function escapeHtml(value) {\n  return String(value ?? \"\").replace(/[&<>\"']/g, (c) => ({\n    \"&\": \"&amp;\",\n    \"<\": \"&lt;\",\n    \">\": \"&gt;\",\n    '\"': \"&quot;\",\n    \"'\": \"&#39;\",\n  }[c]));\n}\n\nfunction formatDate(value) {\n  if (!value) return \"\";\n  const [year, month, day] = String(value).split(\"-\");\n  if (!year || !month || !day) return escapeHtml(value);\n  return `${day}.${month}.${year}`;\n}\n\nfunction formatCurrency(value) {\n  const number = Number(value);\n  if (Number.isNaN(number)) return escapeHtml(value);\n  return number.toLocaleString(\"de-DE\", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + \" €\";\n}\n\nconst { antragstyp, formData, email, quelle } = $input.item.json;\nconst generatedAt = new Date().toLocaleDateString(\"de-DE\", { year: \"numeric\", month: \"long\", day: \"numeric\" });\n\nconst baseStyles = `\n  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a202c; margin: 0; padding: 0; }\n  .page { padding: 32px 48px 48px; }\n  header { background: #1a365d; color: #ffffff; padding: 28px 48px; }\n  header h1 { margin: 0; font-size: 22px; }\n  header p { margin: 4px 0 0; font-size: 13px; color: #cbd5e0; }\n  h2 { font-size: 15px; color: #1a365d; border-bottom: 2px solid #38a169; padding-bottom: 6px; margin-top: 28px; }\n  dl { display: grid; grid-template-columns: 200px 1fr; row-gap: 8px; column-gap: 12px; margin: 12px 0; }\n  dt { font-weight: 600; color: #4a5568; font-size: 13px; }\n  dd { margin: 0; font-size: 13px; }\n  footer { margin-top: 40px; font-size: 11px; color: #a0aec0; border-top: 1px solid #e2e8f0; padding-top: 12px; }\n`;\n\nfunction renderWohngeld(formData) {\n  return `\n    <dl>\n      <dt>Name</dt><dd>${escapeHtml(formData.name)}</dd>\n      <dt>Geburtsdatum</dt><dd>${formatDate(formData.geburtsdatum)}</dd>\n    </dl>\n    <h2>Adresse</h2>\n    <dl>\n      <dt>Straße</dt><dd>${escapeHtml(formData.strasse)}</dd>\n      <dt>PLZ / Ort</dt><dd>${escapeHtml(formData.plz)} ${escapeHtml(formData.ort)}</dd>\n    </dl>\n    <h2>Haushalt</h2>\n    <dl>\n      <dt>Haushaltsgröße</dt><dd>${escapeHtml(formData.haushaltsgroesse)} Personen</dd>\n      <dt>Bruttoeinkommen</dt><dd>${formatCurrency(formData.bruttoeinkommen)} / Monat</dd>\n      <dt>Sozialleistungen</dt><dd>${formData.sozialleistungen === \"ja\" ? \"Ja\" : \"Nein\"}</dd>\n    </dl>\n    <h2>Wohnung</h2>\n    <dl>\n      <dt>Kaltmiete</dt><dd>${formatCurrency(formData.kaltmiete)} / Monat</dd>\n      <dt>Nebenkosten</dt><dd>${formatCurrency(formData.nebenkosten)} / Monat</dd>\n    </dl>\n  `;\n}\n\nfunction renderPflegegeld(formData) {\n  const antragsartLabels = {\n    zuerkennung: \"die Zuerkennung des Pflegegeldes\",\n    erhoehung: \"die Erhöhung des Pflegegeldes\",\n  };\n  return `\n    <dl>\n      <dt>Ich beantrage</dt><dd>${escapeHtml(antragsartLabels[formData.antragsart] ?? formData.antragsart)}</dd>\n      <dt>Name</dt><dd>${escapeHtml(formData.name)}</dd>\n    </dl>\n    <h2>Adresse</h2>\n    <dl>\n      <dt>Straße</dt><dd>${escapeHtml(formData.strasse)}</dd>\n      <dt>PLZ / Ort</dt><dd>${escapeHtml(formData.plz)} ${escapeHtml(formData.ort)}</dd>\n    </dl>\n  `;\n}\n\nfunction renderGeneric(formData) {\n  const rows = Object.entries(formData || {})\n    .map(([key, value]) => `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd>`)\n    .join(\"\");\n  return `<h2>Angaben</h2><dl>${rows}</dl><p style=\"margin-top:16px;font-size:12px;color:#a0aec0;\">Detaillierte Vorlage für diesen Antragstyp folgt in Kürze – aktuell werden alle übermittelten Felder aufgelistet.</p>`;\n}\n\nconst titles = {\n  wohngeld: \"Antrag auf Wohngeld\",\n  kinderzuschlag: \"Antrag auf Kinderzuschlag\",\n  elterngeld: \"Antrag auf Elterngeld\",\n  pflegegeld: \"Antrag auf Pflegegeld\",\n};\n\nconst subjects = {\n  wohngeld: \"Ihr Wohngeldantrag\",\n  kinderzuschlag: \"Ihr Kinderzuschlagantrag\",\n  elterngeld: \"Ihr Elterngeldantrag\",\n  pflegegeld: \"Ihr Pflegegeldantrag\",\n};\n\nconst body =\n  antragstyp === \"wohngeld\" ? renderWohngeld(formData) :\n  antragstyp === \"pflegegeld\" ? renderPflegegeld(formData) :\n  renderGeneric(formData);\n\nconst html = `<!DOCTYPE html>\n<html lang=\"de\">\n<head>\n<meta charset=\"utf-8\" />\n<style>${baseStyles}</style>\n</head>\n<body>\n  <header>\n    <h1>${escapeHtml(titles[antragstyp] ?? \"Antrag\")}</h1>\n    <p>Erstellt am ${generatedAt} über die Formularhilfe</p>\n  </header>\n  <div class=\"page\">\n    ${body}\n    <footer>Dieser Antrag wurde automatisiert aus den Angaben des Antragstellers erstellt und ersetzt keine Rechtsberatung.</footer>\n  </div>\n</body>\n</html>`;\n\nconst htmlBuffer = Buffer.from(html, \"utf8\");\nconst binaryData = await this.helpers.prepareBinaryData(htmlBuffer, \"index.html\", \"text/html\");\n\nreturn {\n  json: {\n    antragstyp,\n    email,\n    quelle,\n    filename: `antrag-${antragstyp}.pdf`,\n    subject: subjects[antragstyp] ?? \"Ihr Antrag\",\n  },\n  binary: {\n    data: binaryData,\n  },\n};"
+      }
+    },
+    {
+      "id": "e6d68034-fdcb-4859-af89-6d0da8cf0e83",
+      "name": "PDF erzeugen (HTML zu PDF)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        60
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.PDF_SERVICE_URL }}",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "files",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "b4eb092e-a579-452d-ae97-45bfa9f231f2",
+      "name": "Antrag per E-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1040,
+        60
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_YOUR_SMTP_CREDENTIAL_ID",
+          "name": "SMTP account"
+        }
+      },
+      "parameters": {
+        "resource": "email",
+        "operation": "send",
+        "fromEmail": "={{ $env.SMTP_FROM_EMAIL }}",
+        "toEmail": "={{ $('HTML-Vorlage befüllen').item.json.email }}",
+        "subject": "={{ $('HTML-Vorlage befüllen').item.json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ '<p>Guten Tag,</p><p>vielen Dank für Ihren Antrag. Den fertig ausgefüllten Antrag finden Sie im Anhang dieser E-Mail als PDF.</p><p>Mit freundlichen Grüßen<br>Ihr Formularhilfe-Team</p>' }}",
+        "options": {
+          "fileAttachments": "data"
+        }
+      }
+    },
+    {
+      "id": "0fd765b9-b541-4963-a84c-dbb208e03b8d",
+      "name": "Antwort: Erfolg",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1280,
+        60
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: \"Antrag wurde an deine E-Mail gesendet\" }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "49de5ca8-b752-49d7-b11f-af555cd27511",
+      "name": "Antwort: Fehler",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        560,
+        460
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, message: $json.error ?? \"Unbekannter Antragstyp oder fehlende Pflichtfelder.\" }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "8b312192-4d54-4957-8481-c116711b4758",
+      "name": "Sticky Note: Konfiguration",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        520
+      ],
+      "parameters": {
+        "width": 460,
+        "height": 300,
+        "color": 5,
+        "content": "## Vor dem ersten Lauf einrichten\n\n1. **SMTP-Credential**: In n8n unter *Credentials* eine neue \"SMTP\"-Zugangsdaten anlegen (Host, Port, User, Passwort deines Mailanbieters) und im Node **Antrag per E-Mail senden** auswählen.\n2. **Umgebungsvariablen** (Settings → Environment Variables oder .env deiner n8n-Instanz):\n   - `SMTP_FROM_EMAIL` – Absenderadresse, z. B. `no-reply@deine-domain.de`\n   - `PDF_SERVICE_URL` – siehe Sticky Note \"PDF-Service\"\n3. Webhook-URL nach dem Aktivieren: `POST https://<deine-n8n-instanz>/webhook/antrag`\n   Erwarteter Body: `{ antragstyp, formData, email }` (passt zum Astro-Wizard aus dem Frontend-Projekt)."
+      }
+    },
+    {
+      "id": "fc39664c-a0a8-4f91-a771-5e2fb873eadf",
+      "name": "Sticky Note: PDF-Service",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -260
+      ],
+      "parameters": {
+        "width": 460,
+        "height": 280,
+        "color": 6,
+        "content": "## HTML-zu-PDF-Service\n\nDer Node \"PDF erzeugen (HTML zu PDF)\" ruft **Gotenberg** auf (selbst gehosteter Chromium-basierter Konvertierungsdienst, läuft als eigener Container `gotenberg` im selben docker-compose-Projekt).\n\n**Request:** multipart/form-data an `http://gotenberg:3000/forms/chromium/convert/html`, Feld `files` mit einer Datei namens `index.html` (Pflicht-Dateiname laut Gotenberg-API).\n\nDie HTML-Vorlage wird im vorherigen Code-Node bereits als Binärdatei (Property `data`, Dateiname `index.html`) erzeugt, nicht mehr als reiner Text im JSON.\n\nAndere Dienste (Browserless, api2pdf, ...) brauchen ein anderes Request-Format — dann Body-Typ und Felder in diesem Node entsprechend anpassen."
+      }
+    },
+    {
+      "id": "8a638706-2f0b-483f-b612-908e11f590aa",
+      "name": "Bezahlschranke prüfen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        260
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const fs = require(\"fs\");\nconst path = require(\"path\");\n\nconst DATA_DIR = \"/home/node/.n8n/formularhilfe-data\";\nconst CONFIG_FILE = path.join(DATA_DIR, \"config.json\");\nconst ZAEHLER_FILE = path.join(DATA_DIR, \"zaehler.json\");\nconst PENDING_FILE = path.join(DATA_DIR, \"pending.json\");\nconst SUBSCRIBERS_FILE = path.join(DATA_DIR, \"subscribers.json\");\n\nfunction readJson(file, fallback) {\n  try {\n    fs.mkdirSync(DATA_DIR, { recursive: true });\n    return JSON.parse(fs.readFileSync(file, \"utf8\"));\n  } catch {\n    return fallback;\n  }\n}\n\nfunction writeJson(file, data) {\n  fs.mkdirSync(DATA_DIR, { recursive: true });\n  fs.writeFileSync(file, JSON.stringify(data, null, 2));\n}\n\nfunction readConfig() {\n  return readJson(CONFIG_FILE, { wohngeld: false, kinderzuschlag: false, elterngeld: false, pflegegeld: false });\n}\n\nfunction readZaehler() {\n  return readJson(ZAEHLER_FILE, {});\n}\n\nfunction readPending() {\n  return readJson(PENDING_FILE, {});\n}\n\nfunction readSubscribers() {\n  return readJson(SUBSCRIBERS_FILE, {});\n}\n\nconst { antragstyp, formData, email, quelle } = $input.item.json;\n\nconst config = readConfig();\nconst kostenpflichtig = config[antragstyp] === true;\n\nif (!kostenpflichtig) {\n  return { json: { antragstyp, formData, email, quelle, paymentRequired: false } };\n}\n\nconst subscribers = readSubscribers();\nif (subscribers[email]?.status === \"active\") {\n  return { json: { antragstyp, formData, email, quelle, paymentRequired: false } };\n}\n\nconst zaehler = readZaehler();\nconst bisher = zaehler[email] || 0;\n\nif (bisher < 3) {\n  zaehler[email] = bisher + 1;\n  writeJson(ZAEHLER_FILE, zaehler);\n  return { json: { antragstyp, formData, email, quelle, paymentRequired: false } };\n}\n\nconst pendingId = require(\"crypto\").randomUUID();\nconst pending = readPending();\npending[pendingId] = {\n  antragstyp,\n  formData,\n  email,\n  status: \"pending\",\n  createdAt: new Date().toISOString(),\n};\nwriteJson(PENDING_FILE, pending);\n\nreturn {\n  json: {\n    antragstyp,\n    email,\n    quelle,\n    paymentRequired: true,\n    pendingId,\n  },\n};"
+      }
+    },
+    {
+      "id": "bdcde3c9-0105-41b7-a383-6ef868a640c2",
+      "name": "Zahlung erforderlich?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        260
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.paymentRequired ? 'true' : 'false' }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "9873c0f9-f052-4259-ae9c-f195d7d174d4",
+      "name": "Antwort: Zahlung erforderlich",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        800,
+        380
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, paymentRequired: true, pendingId: $json.pendingId, antragstyp: $json.antragstyp, message: \"Kostenloses Kontingent ausgeschöpft. Bitte bezahlen, um den Antrag zu erstellen.\" }) }}",
+        "options": {
+          "responseCode": 402
+        }
+      }
+    },
+    {
+      "id": "a96d2610-a68d-4b10-a077-ec3bb6e824ea",
+      "name": "Webhook: Admin-Konfiguration",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        620
+      ],
+      "webhookId": "78e8cd05-6d38-49ac-ab50-6a6ae8989db5",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-config",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "831b4453-ab55-456c-af89-6059cf86447e",
+      "name": "Admin-Konfiguration verarbeiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        620
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const fs = require(\"fs\");\nconst path = require(\"path\");\n\nconst DATA_DIR = \"/home/node/.n8n/formularhilfe-data\";\nconst CONFIG_FILE = path.join(DATA_DIR, \"config.json\");\nconst VERIFIED_FILE = path.join(DATA_DIR, \"verified.json\");\nconst ZAEHLER_FILE = path.join(DATA_DIR, \"zaehler.json\");\nconst PENDING_FILE = path.join(DATA_DIR, \"pending.json\");\n\nfunction readJson(file, fallback) {\n  try {\n    fs.mkdirSync(DATA_DIR, { recursive: true });\n    return JSON.parse(fs.readFileSync(file, \"utf8\"));\n  } catch {\n    return fallback;\n  }\n}\n\nfunction writeJson(file, data) {\n  fs.mkdirSync(DATA_DIR, { recursive: true });\n  fs.writeFileSync(file, JSON.stringify(data, null, 2));\n}\n\nfunction readConfig() {\n  return readJson(CONFIG_FILE, { wohngeld: false, kinderzuschlag: false, elterngeld: false, pflegegeld: false });\n}\n\nfunction readZaehler() {\n  return readJson(ZAEHLER_FILE, {});\n}\n\nfunction readVerified() {\n  return readJson(VERIFIED_FILE, {});\n}\n\nfunction readPending() {\n  return readJson(PENDING_FILE, {});\n}\n\nconst body = $input.item.json.body ?? {};\nconst { action, password, config: neueConfig, email: zielEmail } = body;\n\nif (!$env.ADMIN_PASSWORD || password !== $env.ADMIN_PASSWORD) {\n  return { json: { success: false, message: \"Falsches Passwort.\" } };\n}\n\nconst antragstypen = [\"wohngeld\", \"kinderzuschlag\", \"elterngeld\", \"pflegegeld\"];\n\nif (action === \"get\") {\n  return { json: { success: true, config: readConfig(), verified: readVerified() } };\n}\n\nif (action === \"set\") {\n  const aktuelle = readConfig();\n  for (const typ of antragstypen) {\n    if (typeof neueConfig?.[typ] === \"boolean\") {\n      aktuelle[typ] = neueConfig[typ];\n    }\n  }\n  writeJson(CONFIG_FILE, aktuelle);\n  return { json: { success: true, config: aktuelle } };\n}\n\nif (action === \"delete_verified\") {\n  if (!zielEmail) {\n    return { json: { success: false, message: \"E-Mail-Adresse fehlt.\" } };\n  }\n  const verified = readVerified();\n  delete verified[zielEmail];\n  writeJson(VERIFIED_FILE, verified);\n  return { json: { success: true, verified } };\n}\n\nreturn { json: { success: false, message: 'Unbekannte Aktion. Erwartet: \"get\", \"set\" oder \"delete_verified\".' } };"
+      }
+    },
+    {
+      "id": "5e7b90c8-96d6-488d-be42-9055d7231e15",
+      "name": "Antwort: Admin-Konfiguration",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        320,
+        620
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "796cd655-80f8-46aa-b5e7-9bc0da9128b9",
+      "name": "Webhook: Checkout erstellen",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        780
+      ],
+      "webhookId": "c25afc27-e715-4d41-80c5-57ef06f3893b",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "checkout",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "77f061f7-942e-4d10-adb4-6acca7160f8d",
+      "name": "Checkout vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        780
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const fs = require(\"fs\");\nconst path = require(\"path\");\n\nconst DATA_DIR = \"/home/node/.n8n/formularhilfe-data\";\nconst CONFIG_FILE = path.join(DATA_DIR, \"config.json\");\nconst ZAEHLER_FILE = path.join(DATA_DIR, \"zaehler.json\");\nconst PENDING_FILE = path.join(DATA_DIR, \"pending.json\");\n\nfunction readJson(file, fallback) {\n  try {\n    fs.mkdirSync(DATA_DIR, { recursive: true });\n    return JSON.parse(fs.readFileSync(file, \"utf8\"));\n  } catch {\n    return fallback;\n  }\n}\n\nfunction writeJson(file, data) {\n  fs.mkdirSync(DATA_DIR, { recursive: true });\n  fs.writeFileSync(file, JSON.stringify(data, null, 2));\n}\n\nfunction readConfig() {\n  return readJson(CONFIG_FILE, { wohngeld: false, kinderzuschlag: false, elterngeld: false, pflegegeld: false });\n}\n\nfunction readZaehler() {\n  return readJson(ZAEHLER_FILE, {});\n}\n\nfunction readPending() {\n  return readJson(PENDING_FILE, {});\n}\n\nconst { pendingId, plan } = $input.item.json.body ?? {};\n\nif (!pendingId || !plan) {\n  throw new Error(\"pendingId und plan sind erforderlich.\");\n}\n\nconst pending = readPending();\nconst eintrag = pending[pendingId];\n\nif (!eintrag) {\n  throw new Error(\"Unbekannte oder abgelaufene pendingId.\");\n}\nif (eintrag.status === \"paid\") {\n  throw new Error(\"Dieser Antrag wurde bereits bezahlt.\");\n}\n\nconst priceId = plan === \"abo\" ? $env.STRIPE_PRICE_ABO : $env.STRIPE_PRICE_EINMALIG;\nconst mode = plan === \"abo\" ? \"subscription\" : \"payment\";\n\nif (!$env.STRIPE_SECRET_KEY || !priceId) {\n  throw new Error(\"Zahlungsanbieter ist noch nicht konfiguriert (STRIPE_SECRET_KEY / Price-ID fehlt).\");\n}\n\nconst fields = [\n  [\"mode\", mode],\n  [\"line_items[0][price]\", priceId],\n  [\"line_items[0][quantity]\", \"1\"],\n  [\"customer_email\", eintrag.email],\n  [\"client_reference_id\", pendingId],\n  [\"metadata[pendingId]\", pendingId],\n  [\"success_url\", \"https://agentic-code.at/behoerden-antraege/erfolg\"],\n  [\"cancel_url\", `https://agentic-code.at/behoerden-antraege/bezahlung?pendingId=${pendingId}&antragstyp=${eintrag.antragstyp}`],\n  [\"managed_payments[enabled]\", \"false\"],\n];\nif (mode === \"payment\") {\n  fields.push([\"invoice_creation[enabled]\", \"true\"]);\n}\nconst bodyString = fields\n  .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)\n  .join(\"&\");\n\nreturn {\n  json: {\n    pendingId,\n    email: eintrag.email,\n    antragstyp: eintrag.antragstyp,\n    mode,\n    priceId,\n    bodyString,\n  },\n};"
+      }
+    },
+    {
+      "id": "821e66bd-f0dc-4b5a-87bf-02aeb3e6a3cb",
+      "name": "Stripe: Checkout Session erstellen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        320,
+        780
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.stripe.com/v1/checkout/sessions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.STRIPE_SECRET_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "specifyBody": "string",
+        "options": {},
+        "body": "={{ $json.bodyString }}"
+      }
+    },
+    {
+      "id": "0179eb36-b2c1-45ad-83b3-bcb410c23c2c",
+      "name": "Checkout-URL extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        780
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "return { json: { success: true, checkoutUrl: $input.item.json.url } };"
+      }
+    },
+    {
+      "id": "1af170d9-3ade-474f-bf33-5ff8e029d7cc",
+      "name": "Antwort: Checkout-URL",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        800,
+        780
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "59bd6070-d0dd-4716-bd63-7cac12ed55d2",
+      "name": "Antwort: Checkout-Fehler",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        320,
+        920
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, message: $json.error ?? \"Checkout konnte nicht erstellt werden.\" }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "d6fb2884-2d9b-4a5f-9273-209ab5fb7c78",
+      "name": "Webhook: Stripe Events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        1080
+      ],
+      "webhookId": "668ae90e-f476-4324-91e7-5e09bf06873d",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "stripe-webhook",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      }
+    },
+    {
+      "id": "46f8d94e-8bdc-455e-8a13-60eecb01a263",
+      "name": "Stripe-Signatur prüfen & Event verarbeiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        1080
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const fs = require(\"fs\");\nconst path = require(\"path\");\n\nconst DATA_DIR = \"/home/node/.n8n/formularhilfe-data\";\nconst CONFIG_FILE = path.join(DATA_DIR, \"config.json\");\nconst ZAEHLER_FILE = path.join(DATA_DIR, \"zaehler.json\");\nconst PENDING_FILE = path.join(DATA_DIR, \"pending.json\");\nconst SUBSCRIBERS_FILE = path.join(DATA_DIR, \"subscribers.json\");\n\nfunction readJson(file, fallback) {\n  try {\n    fs.mkdirSync(DATA_DIR, { recursive: true });\n    return JSON.parse(fs.readFileSync(file, \"utf8\"));\n  } catch {\n    return fallback;\n  }\n}\n\nfunction writeJson(file, data) {\n  fs.mkdirSync(DATA_DIR, { recursive: true });\n  fs.writeFileSync(file, JSON.stringify(data, null, 2));\n}\n\nfunction readConfig() {\n  return readJson(CONFIG_FILE, { wohngeld: false, kinderzuschlag: false, elterngeld: false, pflegegeld: false });\n}\n\nfunction readZaehler() {\n  return readJson(ZAEHLER_FILE, {});\n}\n\nfunction readPending() {\n  return readJson(PENDING_FILE, {});\n}\n\nfunction readSubscribers() {\n  return readJson(SUBSCRIBERS_FILE, {});\n}\nconst crypto = require(\"crypto\");\n\nconst headers = $input.item.json.headers ?? {};\nconst signatureHeader = headers[\"stripe-signature\"];\nconst rawBody = $input.item.binary?.data\n  ? Buffer.from($input.item.binary.data.data, \"base64\").toString(\"utf8\")\n  : JSON.stringify($input.item.json.body ?? {});\n\nif (!signatureHeader) {\n  throw new Error(\"Fehlender Stripe-Signature-Header.\");\n}\n\nconst parts = Object.fromEntries(\n  signatureHeader.split(\",\").map((part) => {\n    const [key, value] = part.split(\"=\");\n    return [key, value];\n  })\n);\n\nconst secret = $env.STRIPE_WEBHOOK_SECRET;\nif (!secret) {\n  throw new Error(\"STRIPE_WEBHOOK_SECRET ist nicht konfiguriert.\");\n}\n\nconst signedPayload = `${parts.t}.${rawBody}`;\nconst expected = crypto.createHmac(\"sha256\", secret).update(signedPayload).digest(\"hex\");\n\nif (expected !== parts.v1) {\n  throw new Error(\"Ungültige Stripe-Signatur.\");\n}\n\nconst fiveMinutes = 5 * 60;\nconst nowSeconds = Math.floor(Date.now() / 1000);\nif (Math.abs(nowSeconds - Number(parts.t)) > fiveMinutes) {\n  throw new Error(\"Stripe-Signatur-Zeitstempel zu alt (mögliche Replay-Attacke).\");\n}\n\nconst event = JSON.parse(rawBody);\n\nif (event.type === \"customer.subscription.deleted\") {\n  const subscription = event.data.object;\n  const subscribers = readSubscribers();\n  const email = Object.keys(subscribers).find(\n    (e) => subscribers[e].subscriptionId === subscription.id\n  );\n  if (email) {\n    subscribers[email].status = \"canceled\";\n    subscribers[email].canceledAt = new Date().toISOString();\n    writeJson(SUBSCRIBERS_FILE, subscribers);\n  }\n  return { json: { handled: false, eventType: event.type } };\n}\n\nif (event.type !== \"checkout.session.completed\") {\n  return { json: { handled: false, eventType: event.type } };\n}\n\nconst session = event.data.object;\nconst pendingId = session.metadata?.pendingId;\nconst pending = readPending();\nconst eintrag = pending[pendingId];\n\nif (!eintrag) {\n  return { json: { handled: false, reason: \"Unbekannte pendingId in Stripe-Event.\" } };\n}\n\neintrag.status = \"paid\";\neintrag.paidAt = new Date().toISOString();\npending[pendingId] = eintrag;\nwriteJson(PENDING_FILE, pending);\n\nconst zaehler = readZaehler();\nzaehler[eintrag.email] = (zaehler[eintrag.email] || 0) + 1;\nwriteJson(ZAEHLER_FILE, zaehler);\n\nif (session.mode === \"subscription\" && session.subscription) {\n  const subscribers = readSubscribers();\n  subscribers[eintrag.email] = {\n    subscriptionId: session.subscription,\n    status: \"active\",\n    since: new Date().toISOString(),\n  };\n  writeJson(SUBSCRIBERS_FILE, subscribers);\n}\n\nreturn {\n  json: {\n    handled: true,\n    antragstyp: eintrag.antragstyp,\n    formData: eintrag.formData,\n    email: eintrag.email,\n    quelle: \"stripe\",\n  },\n};"
+      }
+    },
+    {
+      "id": "446117f6-a61a-48f4-bb38-42f8219ca7c0",
+      "name": "PDF erzeugen nötig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        320,
+        1080
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.handled ? 'true' : 'false' }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "556c2c92-3549-40c9-93ed-dc1276804d24",
+      "name": "Antwort: Stripe OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        560,
+        1180
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ received: true }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "3f72aaef-8d67-4d73-a375-99d3aba2241e",
+      "name": "Antwort: Stripe-Fehler",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        320,
+        1220
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ received: false, message: $json.error ?? \"Signaturprüfung fehlgeschlagen.\" }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "4e4f9cd5-c3c3-4b9a-a0b2-c4b46b388cd3",
+      "name": "Sticky Note: Bezahlschranke & Stripe",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        1340
+      ],
+      "parameters": {
+        "width": 900,
+        "height": 340,
+        "color": 4,
+        "content": "## Bezahlschranke & Stripe-Setup\\n\\n**Speicherung** (keine Datenbank, JSON-Dateien im n8n-Datenvolume, überlebt Container-Neustarts):\\n- `/home/node/.n8n/formularhilfe-data/config.json` — welcher Antragstyp kostenpflichtig ist (Admin-Bereich schreibt hierher)\\n- `zaehler.json` — Anzahl bereits erfolgreich abgeschlossener kostenpflichtiger Anträge pro E-Mail (erste 3 = kostenlos)\\n- `pending.json` — Formulardaten, die auf Zahlung warten (Schlüssel = pendingId)\\n\\n**Bereits gesetzt (technische Voraussetzung, sonst schlagen die Code-Nodes fehl):**\\n- `NODE_FUNCTION_ALLOW_BUILTIN=fs,crypto,path` — n8n blockiert `require(\"fs\")` in Code-Nodes standardmäßig\\n- `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` — sonst ist $env in Ausdrücken/Code-Nodes `undefined`\\n\\n**Vor Inbetriebnahme in der docker-compose.yaml eintragen:**\\n- `ADMIN_PASSWORD` — Passwort für den Admin-Bereich (`/admin` auf der Website)\\n- `STRIPE_SECRET_KEY` — dein Stripe Secret Key (sk_live_... oder sk_test_...)\\n- `STRIPE_WEBHOOK_SECRET` — Signing Secret des Stripe-Webhooks (siehe unten)\\n- `STRIPE_PRICE_EINMALIG` — Price-ID des 4,99€-Einmalprodukts (mode=payment)\\n- `STRIPE_PRICE_ABO` — Price-ID des 9,99€/Monat-Abos (mode=subscription)\\n\\n**Bei Stripe einrichten:** Zwei Prices im Dashboard anlegen (einmalig 4,99€ / wiederkehrend monatlich 9,99€), dann unter Developers → Webhooks einen Endpoint auf `https://n8n.agentic-code.at/webhook/stripe-webhook` für das Event `checkout.session.completed` anlegen — das Signing Secret von dort in `STRIPE_WEBHOOK_SECRET` eintragen."
+      }
+    },
+    {
+      "id": "7f3102f4-803d-4cd1-b5cf-1f0b05d86fbe",
+      "name": "E-Mail-Verifizierung prüfen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        60
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const fs = require(\"fs\");\nconst path = require(\"path\");\n\nconst DATA_DIR = \"/home/node/.n8n/formularhilfe-data\";\nconst CONFIG_FILE = path.join(DATA_DIR, \"config.json\");\nconst ZAEHLER_FILE = path.join(DATA_DIR, \"zaehler.json\");\nconst PENDING_FILE = path.join(DATA_DIR, \"pending.json\");\nconst VERIFIED_FILE = path.join(DATA_DIR, \"verified.json\");\nconst VERIFY_PENDING_FILE = path.join(DATA_DIR, \"verify-pending.json\");\n\nfunction readJson(file, fallback) {\n  try {\n    fs.mkdirSync(DATA_DIR, { recursive: true });\n    return JSON.parse(fs.readFileSync(file, \"utf8\"));\n  } catch {\n    return fallback;\n  }\n}\n\nfunction writeJson(file, data) {\n  fs.mkdirSync(DATA_DIR, { recursive: true });\n  fs.writeFileSync(file, JSON.stringify(data, null, 2));\n}\n\nfunction readVerified() {\n  return readJson(VERIFIED_FILE, {});\n}\n\nfunction readVerifyPending() {\n  return readJson(VERIFY_PENDING_FILE, {});\n}\n\nconst { antragstyp, formData, email, quelle } = $input.item.json;\n\nconst verified = readVerified();\n\nif (verified[email]) {\n  return { json: { antragstyp, formData, email, quelle, verificationRequired: false } };\n}\n\nconst token = require(\"crypto\").randomUUID();\nconst verifyPending = readVerifyPending();\nverifyPending[token] = {\n  antragstyp,\n  formData,\n  email,\n  createdAt: new Date().toISOString(),\n};\nwriteJson(VERIFY_PENDING_FILE, verifyPending);\n\nreturn {\n  json: {\n    email,\n    token,\n    verificationRequired: true,\n  },\n};"
+      }
+    },
+    {
+      "id": "ff583cec-14fe-4704-8a4c-86a6dc2b3173",
+      "name": "E-Mail-Verifizierung nötig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        60
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.verificationRequired ? 'true' : 'false' }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "902b9bb9-0d4b-4e21-870e-ccf48916d8c6",
+      "name": "Bestätigungslink erzeugen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -40
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const email = $input.item.json.email;\nconst token = $input.item.json.token;\nconst verifyUrl = `https://agentic-code.at/behoerden-antraege/bestaetigen?token=${token}`;\n\nreturn { json: { email, verifyUrl } };"
+      }
+    },
+    {
+      "id": "7e67367e-5232-49e5-be2c-012533fa2701",
+      "name": "Bestätigungs-E-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1040,
+        -40
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_YOUR_SMTP_CREDENTIAL_ID",
+          "name": "SMTP account"
+        }
+      },
+      "parameters": {
+        "resource": "email",
+        "operation": "send",
+        "fromEmail": "={{ $env.SMTP_FROM_EMAIL }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "Bitte bestätige deine E-Mail-Adresse",
+        "emailFormat": "html",
+        "html": "={{ '<p>Guten Tag,</p><p>bitte bestätige deine E-Mail-Adresse, um deinen Antrag abzuschließen:</p><p><a href=\"' + $json.verifyUrl + '\">E-Mail-Adresse bestätigen</a></p><p>Falls du diesen Antrag nicht gestellt hast, kannst du diese E-Mail ignorieren.</p>' }}",
+        "options": {}
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "1afc886f-312e-4761-bb77-bfb0669bcfce",
+      "name": "Antwort: Verifizierung erforderlich",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1280,
+        -40
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, verificationRequired: true, message: \"Wir haben dir eine Bestätigungs-E-Mail geschickt. Bitte klicke auf den Link darin, um deinen Antrag abzuschließen.\" }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "659ddfa3-8376-4d70-a05c-c636a0c05a23",
+      "name": "Webhook: E-Mail verifizieren",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        1500
+      ],
+      "webhookId": "477b054e-ba13-4883-b0fe-5ca03f72553d",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "verify-email",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "9877e249-6fbb-4b81-8fa9-843632c0d457",
+      "name": "Verifizierung abschließen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        1500
+      ],
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const fs = require(\"fs\");\nconst path = require(\"path\");\n\nconst DATA_DIR = \"/home/node/.n8n/formularhilfe-data\";\nconst CONFIG_FILE = path.join(DATA_DIR, \"config.json\");\nconst ZAEHLER_FILE = path.join(DATA_DIR, \"zaehler.json\");\nconst PENDING_FILE = path.join(DATA_DIR, \"pending.json\");\nconst VERIFIED_FILE = path.join(DATA_DIR, \"verified.json\");\nconst VERIFY_PENDING_FILE = path.join(DATA_DIR, \"verify-pending.json\");\n\nfunction readJson(file, fallback) {\n  try {\n    fs.mkdirSync(DATA_DIR, { recursive: true });\n    return JSON.parse(fs.readFileSync(file, \"utf8\"));\n  } catch {\n    return fallback;\n  }\n}\n\nfunction writeJson(file, data) {\n  fs.mkdirSync(DATA_DIR, { recursive: true });\n  fs.writeFileSync(file, JSON.stringify(data, null, 2));\n}\n\nfunction readVerified() {\n  return readJson(VERIFIED_FILE, {});\n}\n\nfunction readVerifyPending() {\n  return readJson(VERIFY_PENDING_FILE, {});\n}\n\nconst token = $input.item.json.body?.token;\n\nif (!token) {\n  throw new Error(\"Kein Bestätigungs-Token angegeben.\");\n}\n\nconst verifyPending = readVerifyPending();\nconst eintrag = verifyPending[token];\n\nif (!eintrag) {\n  throw new Error(\"Dieser Bestätigungslink ist ungültig oder wurde bereits verwendet.\");\n}\n\nconst oneDayMs = 24 * 60 * 60 * 1000;\nif (Date.now() - new Date(eintrag.createdAt).getTime() > oneDayMs) {\n  throw new Error(\"Dieser Bestätigungslink ist abgelaufen. Bitte stelle den Antrag erneut.\");\n}\n\nconst verified = readVerified();\nverified[eintrag.email] = { verifiedAt: new Date().toISOString() };\nwriteJson(VERIFIED_FILE, verified);\n\ndelete verifyPending[token];\nwriteJson(VERIFY_PENDING_FILE, verifyPending);\n\nreturn {\n  json: {\n    antragstyp: eintrag.antragstyp,\n    formData: eintrag.formData,\n    email: eintrag.email,\n    quelle: \"email-verify\",\n  },\n};"
+      }
+    },
+    {
+      "id": "aeefff82-7acc-4abd-9eef-b8fdc9527641",
+      "name": "Antwort: Verifizierungsfehler",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        320,
+        1600
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, message: $json.error ?? \"Dieser Bestätigungslink ist ungültig oder abgelaufen.\" }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "ecf0563a-be3c-46df-9f0a-d65274668039",
+      "name": "Sticky Note: E-Mail-Verifizierung",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        1660
+      ],
+      "parameters": {
+        "width": 760,
+        "height": 220,
+        "color": 3,
+        "content": "## E-Mail-Verifizierung (Double-Opt-In)\\n\\nVerhindert, dass jemand das Gratis-Kontingent umgeht, indem er bei jedem Antrag eine andere (frei erfundene) E-Mail-Adresse einträgt. Beim allerersten Antrag einer neuen Adresse wird kein PDF erzeugt, sondern eine Bestätigungs-E-Mail verschickt. Erst nach Klick auf den Link darin (`verified.json`) läuft der Antrag durch die normale Bezahlschranken-Logik. Danach ist die Adresse dauerhaft als verifiziert gemerkt — kein erneuter Klick nötig. Links laufen nach 24h ab (`verify-pending.json`)."
+      }
+    },
+    {
+      "id": "5f607bcb-7fce-4c84-86e3-8db534b60e9f",
+      "name": "Antwort: Verifizierungsmail fehlgeschlagen",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1280,
+        120
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, message: \"Die Bestätigungs-E-Mail konnte nicht zugestellt werden. Bitte prüfe deine E-Mail-Adresse und versuche es erneut.\" }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: Antrag empfangen": {
+      "main": [
+        [
+          {
+            "node": "Antragstyp prüfen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Antragstyp prüfen": {
+      "main": [
+        [
+          {
+            "node": "Pflichtfelder validieren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pflichtfelder validieren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pflichtfelder validieren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pflichtfelder validieren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort: Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pflichtfelder validieren": {
+      "main": [
+        [
+          {
+            "node": "E-Mail-Verifizierung prüfen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort: Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML-Vorlage befüllen": {
+      "main": [
+        [
+          {
+            "node": "PDF erzeugen (HTML zu PDF)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF erzeugen (HTML zu PDF)": {
+      "main": [
+        [
+          {
+            "node": "Antrag per E-Mail senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Antrag per E-Mail senden": {
+      "main": [
+        [
+          {
+            "node": "Antwort: Erfolg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bezahlschranke prüfen": {
+      "main": [
+        [
+          {
+            "node": "Zahlung erforderlich?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zahlung erforderlich?": {
+      "main": [
+        [
+          {
+            "node": "Antwort: Zahlung erforderlich",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTML-Vorlage befüllen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: Admin-Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Admin-Konfiguration verarbeiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin-Konfiguration verarbeiten": {
+      "main": [
+        [
+          {
+            "node": "Antwort: Admin-Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: Checkout erstellen": {
+      "main": [
+        [
+          {
+            "node": "Checkout vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checkout vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Stripe: Checkout Session erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort: Checkout-Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe: Checkout Session erstellen": {
+      "main": [
+        [
+          {
+            "node": "Checkout-URL extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort: Checkout-Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checkout-URL extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Antwort: Checkout-URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: Stripe Events": {
+      "main": [
+        [
+          {
+            "node": "Stripe-Signatur prüfen & Event verarbeiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe-Signatur prüfen & Event verarbeiten": {
+      "main": [
+        [
+          {
+            "node": "PDF erzeugen nötig?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort: Stripe-Fehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF erzeugen nötig?": {
+      "main": [
+        [
+          {
+            "node": "HTML-Vorlage befüllen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort: Stripe OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E-Mail-Verifizierung prüfen": {
+      "main": [
+        [
+          {
+            "node": "E-Mail-Verifizierung nötig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E-Mail-Verifizierung nötig?": {
+      "main": [
+        [
+          {
+            "node": "Bestätigungslink erzeugen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Bezahlschranke prüfen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bestätigungslink erzeugen": {
+      "main": [
+        [
+          {
+            "node": "Bestätigungs-E-Mail senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bestätigungs-E-Mail senden": {
+      "main": [
+        [
+          {
+            "node": "Antwort: Verifizierung erforderlich",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort: Verifizierungsmail fehlgeschlagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: E-Mail verifizieren": {
+      "main": [
+        [
+          {
+            "node": "Verifizierung abschließen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifizierung abschließen": {
+      "main": [
+        [
+          {
+            "node": "Bezahlschranke prüfen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort: Verifizierungsfehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "44e85d10-8173-4f04-8da9-9b86756b67cf"
+  },
+  "id": "cc8540aa-6d45-42f1-ad04-942262e74625"
+}

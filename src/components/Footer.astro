@@ -1,0 +1,16 @@
+---
+import { withBase } from "../lib/base";
+---
+
+<footer class="border-t border-slate-200 bg-slate-50">
+	<div class="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-8 text-sm text-slate-600 sm:flex-row sm:justify-between sm:px-6">
+		<p>&copy; 2026 Christian König</p>
+		<nav aria-label="Rechtliches">
+			<ul class="flex items-center gap-4">
+				<li><a href="mailto:chris@live.at" class="inline-flex min-h-11 items-center hover:text-brand-blue hover:underline">Kontakt</a></li>
+				<li><a href={withBase("impressum")} class="inline-flex min-h-11 items-center hover:text-brand-blue hover:underline">Impressum</a></li>
+				<li><a href={withBase("datenschutz")} class="inline-flex min-h-11 items-center hover:text-brand-blue hover:underline">Datenschutz</a></li>
+			</ul>
+		</nav>
+	</div>
+</footer>

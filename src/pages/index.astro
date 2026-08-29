@@ -1,0 +1,71 @@
+---
+import Layout from "../layouts/Layout.astro";
+import AntragCard from "../components/AntragCard.astro";
+import { withBase } from "../lib/base";
+
+const antragstypen = [
+	{
+		href: withBase("wohngeld"),
+		icon: "🏠",
+		title: "Wohngeld",
+		description: "Zuschuss zur Miete oder den Wohnkosten für Ihre Wohnung beantragen.",
+	},
+	{
+		href: withBase("kinderzuschlag"),
+		icon: "👨‍👩‍👧",
+		title: "Kinderzuschlag",
+		description: "Zusätzliche finanzielle Unterstützung für Familien mit Kindern erhalten.",
+	},
+	{
+		href: withBase("elterngeld"),
+		icon: "👶",
+		title: "Elterngeld",
+		description: "Einkommensersatz während der Elternzeit nach der Geburt Ihres Kindes beantragen.",
+	},
+	{
+		href: withBase("pflegegeld"),
+		icon: "🩺",
+		title: "Pflegegeld",
+		description: "Zuerkennung oder Erhöhung des Pflegegeldes beantragen.",
+	},
+];
+---
+
+<Layout
+	title="Formularhilfe — Wohngeld beantragen leicht gemacht"
+	description="Beantworten Sie einfache Fragen und wir erstellen Ihren Behörden-Antrag als fertiges PDF. Wohngeld, Kinderzuschlag und Elterngeld in wenigen Minuten."
+>
+	<section class="bg-gradient-to-b from-brand-blue to-[#12283f] px-4 py-20 text-center text-white sm:px-6 sm:py-28">
+		<div class="mx-auto max-w-3xl">
+			<h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl">
+				Behörden-Anträge in 5 Minuten
+			</h1>
+			<p class="mx-auto mt-6 max-w-xl text-lg text-white/85 sm:text-xl">
+				Diese Seite zeigt Formularbeispiele, wie sie sich sinnvoll in Kundenwebseiten
+				einbauen lassen. Ihre Kunden stellen darüber Anfragen an Ihr Unternehmen – die
+				Website verarbeitet diese automatisch gemäß Ihrem individuellen Workflow.
+			</p>
+			<div class="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+				<a
+					href="#antragstypen"
+					class="flex min-h-11 w-full items-center justify-center rounded-lg bg-brand-green px-8 py-3 text-base font-semibold text-white shadow-md transition hover:bg-brand-green/90 sm:w-auto"
+				>
+					Jetzt Antrag starten
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<section id="antragstypen" class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+		<div class="mx-auto max-w-2xl text-center">
+			<h2 class="text-3xl font-bold text-brand-blue sm:text-4xl">Welchen Antrag möchten Sie stellen?</h2>
+			<p class="mt-4 text-lg text-slate-600">
+				Wählen Sie einen Antragstyp aus und starten Sie den geführten Fragebogen.
+			</p>
+		</div>
+
+		<div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+			{antragstypen.map((antrag) => <AntragCard {...antrag} />)}
+		</div>
+	</section>
+</Layout>
